@@ -2,6 +2,7 @@ services:
   - type: web
     name: keccak-model-web
     runtime: node
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
@@ -20,4 +21,5 @@ services:
 
   - type: keyvalue
     name: keccak-model-cache
+    plan: free
     ipAllowList: []
