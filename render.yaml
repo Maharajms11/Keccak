@@ -20,3 +20,4 @@ services:
 
   - type: keyvalue
     name: keccak-model-cache
+    ipAllowList: []
