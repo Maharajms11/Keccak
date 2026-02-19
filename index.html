@@ -559,6 +559,43 @@
         timer: null
       };
 
+      function getOrCreateSessionId() {
+        const key = "keccak_session_id";
+        try {
+          const existing = localStorage.getItem(key);
+          if (existing) {
+            return existing;
+          }
+          const created = (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function")
+            ? globalThis.crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          localStorage.setItem(key, created);
+          return created;
+        } catch {
+          return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+      }
+
+      const telemetrySessionId = getOrCreateSessionId();
+
+      function postTelemetry(eventName, details = {}) {
+        if (!globalThis.fetch) return;
+        fetch("/api/events", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            event: eventName,
+            sessionId: telemetrySessionId,
+            details,
+            timestamp: new Date().toISOString()
+          })
+        }).catch(() => {
+          // Keep classroom UX uninterrupted if telemetry fails.
+        });
+      }
+
       function createState() {
         return Array.from({ length: 5 }, () => Array.from({ length: 5 }, () => 0n));
       }
@@ -1097,6 +1134,11 @@
           ui.msgHex.textContent = result.messageHex || "(empty)";
           ui.padHex.textContent = result.paddedHex;
           render();
+          postTelemetry("build_trace", {
+            variant: ui.variant.value,
+            messageLength: ui.message.value.length,
+            traceSteps: appState.trace.length
+          });
         } catch (err) {
           ui.status.textContent = err instanceof Error ? err.message : "Unknown error";
         }
@@ -1163,6 +1205,9 @@
       });
 
       buildTrace();
+      postTelemetry("page_loaded", {
+        path: window.location.pathname
+      });
     </script>
   </body>
 </html>
